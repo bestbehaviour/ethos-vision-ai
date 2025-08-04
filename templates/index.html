@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethos Vision AI</title>
+    <!-- Memuat Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple scrollbar styling */
+        #chat-box::-webkit-scrollbar { width: 4px; }
+        #chat-box::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 20px; }
+        .user-msg { background-color: #3b82f6; color: white; }
+        .ai-msg { background-color: #e5e7eb; color: #1f2937; }
+    </style>
+</head>
+<!-- Latar belakang diubah menjadi gradien -->
+<body class="bg-gradient-to-br from-gray-900 to-blue-900/50 text-white flex flex-col items-center justify-center min-h-screen font-sans p-4">
+
+    <div class="w-full max-w-2xl h-[80vh] bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-2xl flex flex-col">
+        <!-- Header dengan logo dan teks header dari file lokal -->
+        <div class="p-4 border-b border-gray-700 flex flex-col items-center space-y-3">
+            <!-- Logo dari folder static -->
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Ethos Vision AI Logo" class="w-auto h-12">
+            <!-- Teks Header dari folder static -->
+            <img src="{{ url_for('static', filename='header-text.png') }}" alt="Ethos Vision AI Header" class="w-auto h-8">
+        </div>
+
+        <!-- Chat Box -->
+        <div id="chat-box" class="flex-1 p-4 overflow-y-auto space-y-4">
+            <!-- Pesan AI pertama -->
+            <div class="ai-msg self-start max-w-lg p-3 rounded-lg rounded-bl-none">
+                <p>Greetings, dev. I am Ethos Vision. Ask me anything about EthereumOS!</p>
+            </div>
+        </div>
+
+        <!-- Input Form -->
+        <div class="p-4 border-t border-gray-700">
+            <form id="chat-form" class="flex items-center space-x-2">
+                <input type="text" id="message-input" placeholder="Ask about Ethos..." class="flex-1 p-3 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" autocomplete="off">
+                <button type="submit" id="send-button" class="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold transition-colors">
+                    Send
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userMessage = messageInput.value.trim();
+            if (!userMessage) return;
+
+            // 1. Tampilkan pesan user di chat
+            appendMessage(userMessage, 'user');
+            messageInput.value = '';
+            
+            // 2. Tampilkan indikator loading
+            const loadingIndicator = appendMessage('Thinking...', 'ai', true);
+            sendButton.disabled = true;
+
+            try {
+                // 3. Kirim pesan ke backend
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userMessage })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // 4. Hapus loading & tampilkan jawaban AI
+                loadingIndicator.remove();
+                appendMessage(data.reply, 'ai');
+
+            } catch (error) {
+                console.error('Error:', error);
+                loadingIndicator.innerText = 'Sorry, an error occurred. Please try again.';
+            } finally {
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        });
+
+        function appendMessage(text, sender, isLoading = false) {
+            const messageDiv = document.createElement('div');
+            const senderClass = sender === 'user' ? 'user-msg self-end rounded-br-none' : 'ai-msg self-start rounded-bl-none';
+            messageDiv.className = `${senderClass} max-w-lg p-3 rounded-lg`;
+            
+            if (isLoading) {
+                messageDiv.innerHTML = `<p class="animate-pulse">${text}</p>`;
+            } else {
+                messageDiv.innerText = text;
+            }
+            
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll ke bawah
+            return messageDiv;
+        }
+    </script>
+</body>
+</html>
